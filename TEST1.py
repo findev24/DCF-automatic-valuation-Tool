@@ -1483,10 +1483,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
         color=sample_values,
         colorscale='Viridis',
         opacity=0.7,
-        colorbar=dict(
-            title=f"Value per Share ({currency_symbol})",
-            titleside="right"
-        ),
+        showscale=True,
         line=dict(color='white', width=0.5)
     ),
     text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
