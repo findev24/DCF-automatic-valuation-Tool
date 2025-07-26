@@ -1517,11 +1517,6 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                 
                 # Enhanced dark theme layout
                 fig_3d_scatter.update_layout(
-                    title=dict(
-                        text="<b>3D Monte Carlo Valuation Distribution</b><br><sub>Risk-Adjusted Scenario Analysis</sub>",
-                        font=dict(size=22, color='white'),
-                        x=0.5
-                    ),
                     scene=dict(
                         xaxis=dict(
                             title=dict(text='WACC (%)', font=dict(size=14, color='white')),
