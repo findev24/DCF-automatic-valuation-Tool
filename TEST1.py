@@ -1676,11 +1676,7 @@ try:
                      f'Value: {format_currency(value_per_share, currency_symbol)}<br>' +
                      '<extra></extra>'
     ))
-    
-
-    # Stunning layout with dark theme
-
-        scene=dict(
+    scene=dict(
             xaxis=dict(
                 title=dict(text="WACC (%)", font=dict(size=16, color='white')),
                 tickfont=dict(color='white', size=12),
