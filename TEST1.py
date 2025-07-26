@@ -1677,26 +1677,9 @@ try:
                      '<extra></extra>'
     ))
     
-    # Add current market price plane
-    if 'current_market_price' in locals():
-        market_plane = np.full_like(surface_values, current_market_price)
-        fig.add_trace(go.Surface(
-            z=market_plane,
-            x=wacc_mesh * 100,
-            y=terminal_mesh * 100,
-            opacity=0.3,
-            colorscale=[[0, 'rgba(255,0,0,0.3)'], [1, 'rgba(255,0,0,0.3)']],
-            showscale=False,
-            name=f'Market Price: {format_currency(current_market_price, currency_symbol)}'
-        ))
-    
+
     # Stunning layout with dark theme
-    fig.update_layout(
-        title=dict(
-            text="<b>3D DCF Sensitivity Analysis</b><br><sub>WACC vs Terminal Growth Impact on Valuation</sub>",
-            font=dict(size=24, color='white'),
-            x=0.5
-        ),
+
         scene=dict(
             xaxis=dict(
                 title=dict(text="WACC (%)", font=dict(size=16, color='white')),
@@ -1741,37 +1724,6 @@ try:
         )
     )
     
-    # Add subtle animation on load
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="left",
-                buttons=list([
-                    dict(
-                        args=[{"visible": [True, True, True]}],
-                        label="All Layers",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [True, True, False]}],
-                        label="Surface Only",
-                        method="restyle"
-                    )
-                ]),
-                pad={"r": 10, "t": 10},
-                showactive=True,
-                x=0.01,
-                xanchor="left",
-                y=1.0,
-                yanchor="top",
-                bgcolor='rgba(0,0,0,0.7)',
-                bordercolor='white',
-                font=dict(color='white')
-            ),
-        ]
-    )
-    
     # Display the plot
     st.plotly_chart(fig, use_container_width=True, config={
         'displayModeBar': True,
@@ -1779,16 +1731,6 @@ try:
         'modeBarButtonsToRemove': ['pan2d', 'lasso2d']
     })
     
-    # Add descriptive text below
-    st.markdown(f"""
-    <div style='text-align: center; margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;'>
-        <h4>🎯 Key Insights</h4>
-        <p><strong>Surface Color:</strong> Higher values (yellow/white) = Better valuations | Lower values (purple/black) = Worse valuations</p>
-        <p><strong>Orange Diamond:</strong> Your base case DCF valuation at current assumptions</p>
-        <p><strong>Interactive:</strong> Rotate, zoom, and hover over the surface to explore different scenarios</p>
-    </div>
-    """, unsafe_allow_html=True)
-
 except Exception as e:
     st.error(f"3D visualization failed: {str(e)}")
     st.info("💡 Tip: Try refreshing the page or check if your data inputs are valid")
