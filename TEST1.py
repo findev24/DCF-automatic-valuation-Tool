@@ -1599,14 +1599,12 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
     fig_3d_surface = go.Figure()
     
     # Add main surface
-    fig_3d_surface.add_trace(go.Surface(
-        z=surface_values,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100,
-        colorscale='Plasma',
-        opacity=0.9,
-        name='Valuation Surface'
-    ))
+    # Add main surface (ultra-simplified)
+fig_3d_surface.add_trace(go.Surface(
+    z=surface_values,
+    x=wacc_surface_range * 100,
+    y=terminal_surface_range * 100
+))
     
     # Add contour lines at the base (simplified)
     fig_3d_surface.add_trace(go.Contour(
