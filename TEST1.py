@@ -1597,19 +1597,15 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
     
     # Add main surface
     fig_3d_surface.add_trace(go.Surface(
-        z=surface_values,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100,
-        colorscale='Plasma',
-        colorbar=dict(
-            title=f"Value per Share<br>({currency_symbol})",
-            titleside="right",
-            len=0.8
-        ),
-        opacity=0.9,
-        name='Valuation Surface',
-        hovertemplate='WACC: %{x:.1f}%<br>Terminal Growth: %{y:.1f}%<br>Value: $%{z:.0f}<extra></extra>'
-    ))
+    z=surface_values,
+    x=wacc_surface_range * 100,
+    y=terminal_surface_range * 100,
+    colorscale='Plasma',
+    showscale=True,
+    opacity=0.9,
+    name='Valuation Surface',
+    hovertemplate='WACC: %{x:.1f}%<br>Terminal Growth: %{y:.1f}%<br>Value: $%{z:.0f}<extra></extra>'
+))
     
     # Add contour lines at the base
     fig_3d_surface.add_trace(go.Contour(
