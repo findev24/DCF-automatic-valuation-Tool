@@ -1567,12 +1567,12 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                 st.warning("Insufficient valid data points for 3D Monte Carlo visualization.")
         except Exception as e:
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
-    
     # Create 2D sensitivity analysis instead of 3D
+# Reliable 3D DCF Visualization for Streamlit
 try:
     # Use better resolution and spacing for surface
-    wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
-    terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
+    wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 20)  # Reduced resolution
+    terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 20)
     
     # Calculate surface values with better error handling
     surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
@@ -1593,40 +1593,184 @@ try:
             else:
                 surface_values[i, j] = 0
     
-    # Clean the surface data
+    # Clean the surface data thoroughly
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
+    surface_values = np.clip(surface_values, 0, np.percentile(surface_values, 95))  # Remove extreme outliers
     
-    # Create 2D heatmap
-    fig_2d = go.Figure(data=go.Heatmap(
+    # Create 3D surface plot with minimal parameters
+    fig_3d = go.Figure()
+    
+    # Method 1: Basic Surface (most compatible)
+    fig_3d.add_trace(go.Surface(
         z=surface_values,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100,
-        colorscale='Plasma',
-        text=[[format_currency(val, currency_symbol) for val in row] for row in surface_values],
-        texttemplate="%{text}",
-        textfont={"size": 10}
+        showscale=False  # Disable colorbar completely
     ))
     
-    # Add current point marker
-    fig_2d.add_trace(go.Scatter(
-        x=[wacc * 100],
-        y=[terminal_growth_rate * 100],
+    # Add base case point
+    fig_3d.add_trace(go.Scatter3d(
+        x=[10],  # Position as index rather than percentage
+        y=[10],  # Position as index rather than percentage
+        z=[value_per_share],
         mode='markers',
-        marker=dict(size=15, color='red', symbol='diamond'),
+        marker=dict(size=10, color='red'),
         name='Base Case'
     ))
     
-    fig_2d.update_layout(
-        title="DCF Sensitivity Analysis: WACC vs Terminal Growth",
-        xaxis_title="WACC (%)",
-        yaxis_title="Terminal Growth Rate (%)",
-        height=600
+    # Simple layout
+    fig_3d.update_layout(
+        title="3D DCF Sensitivity Analysis",
+        scene=dict(
+            xaxis_title="WACC Index",
+            yaxis_title="Terminal Growth Index", 
+            zaxis_title=f"Value ({currency_symbol})"
+        ),
+        height=600,
+        showlegend=False
     )
     
-    st.plotly_chart(fig_2d, use_container_width=True)
+    st.plotly_chart(fig_3d, use_container_width=True)
+    
+    # Alternative: Wire frame (even more compatible)
+    st.markdown("#### Alternative 3D Wireframe View")
+    
+    fig_wire = go.Figure(data=[go.Surface(
+        z=surface_values,
+        surfacecolor=surface_values,
+        showscale=False,
+        opacity=0.8
+    )])
+    
+    fig_wire.update_traces(
+        contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
+    )
+    
+    fig_wire.update_layout(
+        title="3D Wireframe Sensitivity Analysis",
+        scene=dict(
+            xaxis_title="WACC Levels",
+            yaxis_title="Growth Levels",
+            zaxis_title=f"Valuation ({currency_symbol})"
+        ),
+        height=500
+    )
+    
+    st.plotly_chart(fig_wire, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Error creating sensitivity plot: {str(e)}")
+    st.error(f"3D visualization unavailable: {str(e)}")
+    
+    # Fallback to 2D if 3D fails
+    st.markdown("#### 2D Sensitivity Analysis (Fallback)")
+    try:
+        fig_2d = go.Figure(data=go.Heatmap(
+            z=surface_values,
+            colorscale='Viridis',
+            showscale=True
+        ))
+        
+        fig_2d.update_layout(
+            title="2D Sensitivity Heatmap",
+            xaxis_title="WACC Levels",
+            yaxis_title="Terminal Growth Levels",
+            height=400
+        )
+        
+        st.plotly_chart(fig_2d, use_container_width=True)
+    except:
+        st.error("All visualization methods failed")
+
+# Interactive 3D Scatter Plot (Usually very reliable)
+st.markdown("#### 3D Monte Carlo Results")
+
+if run_monte_carlo and simulation_results and len(simulation_results) > 50:
+    try:
+        # Sample some results for 3D scatter
+        sample_size = min(200, len(simulation_results))
+        sample_indices = np.random.choice(len(simulation_results), sample_size, replace=False)
+        sample_values = [simulation_results[i] for i in sample_indices]
+        
+        # Create random WACC and growth values for demonstration
+        wacc_scatter = np.random.uniform(wacc * 0.8, wacc * 1.2, sample_size)
+        growth_scatter = np.random.uniform(terminal_growth_rate * 0.5, min(terminal_growth_rate * 2, 0.04), sample_size)
+        
+        # Filter valid combinations
+        valid_mask = wacc_scatter > growth_scatter
+        wacc_scatter = wacc_scatter[valid_mask]
+        growth_scatter = growth_scatter[valid_mask]
+        sample_values = [sample_values[i] for i, valid in enumerate(valid_mask) if valid]
+        
+        if len(sample_values) > 10:
+            # 3D Scatter plot (most reliable 3D plot type)
+            fig_scatter = go.Figure(data=[go.Scatter3d(
+                x=wacc_scatter * 100,
+                y=growth_scatter * 100,
+                z=sample_values,
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color=sample_values,
+                    colorscale='Viridis',
+                    opacity=0.8,
+                    showscale=False
+                ),
+                name='Monte Carlo Results'
+            )])
+            
+            # Add base case
+            fig_scatter.add_trace(go.Scatter3d(
+                x=[wacc * 100],
+                y=[terminal_growth_rate * 100],
+                z=[value_per_share],
+                mode='markers',
+                marker=dict(size=12, color='red'),
+                name='Base Case'
+            ))
+            
+            fig_scatter.update_layout(
+                title="3D Monte Carlo Valuation Distribution",
+                scene=dict(
+                    xaxis_title="WACC (%)",
+                    yaxis_title="Terminal Growth (%)",
+                    zaxis_title=f"Value per Share ({currency_symbol})"
+                ),
+                height=600
+            )
+            
+            st.plotly_chart(fig_scatter, use_container_width=True)
+        else:
+            st.info("Insufficient valid data points for 3D scatter plot")
+            
+    except Exception as e:
+        st.error(f"3D scatter plot failed: {str(e)}")
+
+# Simple 3D Bar Chart (Very reliable)
+st.markdown("#### 3D Value Component Analysis")
+
+try:
+    # Create 3D-style bar chart
+    components = ['FCF (1-5)', 'Terminal', 'Net Debt']
+    values = [sum(pv_fcf), pv_terminal_value, -net_debt]
+    colors = ['lightblue', 'lightgreen', 'lightcoral']
+    
+    fig_3d_bars = go.Figure(data=[go.Bar(
+        x=components,
+        y=values,
+        marker_color=colors,
+        text=[format_currency(v, currency_symbol) for v in values],
+        textposition='auto'
+    )])
+    
+    fig_3d_bars.update_layout(
+        title="DCF Component Breakdown",
+        xaxis_title="Components",
+        yaxis_title=f"Value ({currency_symbol}M)",
+        height=400
+    )
+    
+    st.plotly_chart(fig_3d_bars, use_container_width=True)
+    
+except Exception as e:
+    st.error(f"Component chart failed: {str(e)}")
 # Performance metrics and model validation
 if st.checkbox("🔍 Show Model Performance Metrics", value=False):
     st.markdown("### 📊 Model Performance & Validation")
