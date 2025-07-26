@@ -1568,209 +1568,209 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
         except Exception as e:
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
     # Create 2D sensitivity analysis instead of 3D
-# Reliable 3D DCF Visualization for Streamlit
+# Single Stunning 3D DCF Sensitivity Analysis
 try:
-    # Use better resolution and spacing for surface
-    wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 20)  # Reduced resolution
-    terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 20)
+    # Calculate surface with optimal resolution
+    wacc_range = np.linspace(wacc * 0.7, wacc * 1.3, 30)
+    terminal_range = np.linspace(max(terminal_growth_rate * 0.3, 0.005), min(terminal_growth_rate * 2.5, 0.05), 30)
     
-    # Calculate surface values with better error handling
-    surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
+    # Create meshgrid for surface
+    wacc_mesh, terminal_mesh = np.meshgrid(wacc_range, terminal_range)
+    surface_values = np.zeros_like(wacc_mesh)
     
-    for i, tg in enumerate(terminal_surface_range):
-        for j, w in enumerate(wacc_surface_range):
-            if w > tg and w > 0.01:  # Valid calculation with minimum WACC
+    # Calculate valuation surface
+    for i in range(wacc_mesh.shape[0]):
+        for j in range(wacc_mesh.shape[1]):
+            w = wacc_mesh[i, j]
+            tg = terminal_mesh[i, j]
+            
+            if w > tg and w > 0.01:
                 try:
-                    surf_terminal_fcf = fcf_projections[-1] * (1 + tg)
-                    surf_terminal_value = surf_terminal_fcf / (w - tg)
-                    surf_pv_terminal = surf_terminal_value / ((1 + w) ** 5)
-                    surf_pv_fcf = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
-                    surf_enterprise_value = surf_pv_fcf + surf_pv_terminal
-                    surf_equity_value = surf_enterprise_value - net_debt
-                    surface_values[i, j] = max(0, surf_equity_value / shares_outstanding)
+                    # DCF calculation
+                    terminal_fcf = fcf_projections[-1] * (1 + tg)
+                    terminal_val = terminal_fcf / (w - tg)
+                    pv_terminal = terminal_val / ((1 + w) ** 5)
+                    pv_fcf_sum = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
+                    enterprise_val = pv_fcf_sum + pv_terminal
+                    equity_val = enterprise_val - net_debt
+                    surface_values[i, j] = max(0, equity_val / shares_outstanding)
                 except:
                     surface_values[i, j] = 0
             else:
                 surface_values[i, j] = 0
     
-    # Clean the surface data thoroughly
+    # Clean and smooth the data
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
-    surface_values = np.clip(surface_values, 0, np.percentile(surface_values, 95))  # Remove extreme outliers
     
-    # Create 3D surface plot with minimal parameters
-    fig_3d = go.Figure()
+    # Create the stunning 3D plot
+    fig = go.Figure()
     
-    # Method 1: Basic Surface (most compatible)
-    fig_3d.add_trace(go.Surface(
+    # Main surface with beautiful gradient
+    fig.add_trace(go.Surface(
         z=surface_values,
-        showscale=False  # Disable colorbar completely
-    ))
-    
-    # Add base case point
-    fig_3d.add_trace(go.Scatter3d(
-        x=[10],  # Position as index rather than percentage
-        y=[10],  # Position as index rather than percentage
-        z=[value_per_share],
-        mode='markers',
-        marker=dict(size=10, color='red'),
-        name='Base Case'
-    ))
-    
-    # Simple layout
-    fig_3d.update_layout(
-        title="3D DCF Sensitivity Analysis",
-        scene=dict(
-            xaxis_title="WACC Index",
-            yaxis_title="Terminal Growth Index", 
-            zaxis_title=f"Value ({currency_symbol})"
+        x=wacc_mesh * 100,
+        y=terminal_mesh * 100,
+        colorscale='plasma',  # Beautiful purple-pink-yellow gradient
+        opacity=0.85,
+        lighting=dict(
+            ambient=0.4,
+            diffuse=0.8,
+            specular=0.6,
+            roughness=0.2,
+            fresnel=0.2
         ),
-        height=600,
-        showlegend=False
-    )
-    
-    st.plotly_chart(fig_3d, use_container_width=True)
-    
-    # Alternative: Wire frame (even more compatible)
-    st.markdown("#### Alternative 3D Wireframe View")
-    
-    fig_wire = go.Figure(data=[go.Surface(
-        z=surface_values,
-        surfacecolor=surface_values,
-        showscale=False,
-        opacity=0.8
-    )])
-    
-    fig_wire.update_traces(
-        contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
-    )
-    
-    fig_wire.update_layout(
-        title="3D Wireframe Sensitivity Analysis",
-        scene=dict(
-            xaxis_title="WACC Levels",
-            yaxis_title="Growth Levels",
-            zaxis_title=f"Valuation ({currency_symbol})"
-        ),
-        height=500
-    )
-    
-    st.plotly_chart(fig_wire, use_container_width=True)
-
-except Exception as e:
-    st.error(f"3D visualization unavailable: {str(e)}")
-    
-    # Fallback to 2D if 3D fails
-    st.markdown("#### 2D Sensitivity Analysis (Fallback)")
-    try:
-        fig_2d = go.Figure(data=go.Heatmap(
-            z=surface_values,
-            colorscale='Viridis',
-            showscale=True
-        ))
-        
-        fig_2d.update_layout(
-            title="2D Sensitivity Heatmap",
-            xaxis_title="WACC Levels",
-            yaxis_title="Terminal Growth Levels",
-            height=400
+        lightposition=dict(x=100, y=200, z=300),
+        showscale=True,
+        colorbar=dict(
+            title=dict(
+                text=f"Value per Share<br>({currency_symbol})",
+                font=dict(size=14, color='white')
+            ),
+            thickness=20,
+            len=0.7,
+            bgcolor='rgba(0,0,0,0.5)',
+            bordercolor='white',
+            borderwidth=2,
+            tickfont=dict(color='white', size=12)
         )
-        
-        st.plotly_chart(fig_2d, use_container_width=True)
-    except:
-        st.error("All visualization methods failed")
-
-# Interactive 3D Scatter Plot (Usually very reliable)
-st.markdown("#### 3D Monte Carlo Results")
-
-if run_monte_carlo and simulation_results and len(simulation_results) > 50:
-    try:
-        # Sample some results for 3D scatter
-        sample_size = min(200, len(simulation_results))
-        sample_indices = np.random.choice(len(simulation_results), sample_size, replace=False)
-        sample_values = [simulation_results[i] for i in sample_indices]
-        
-        # Create random WACC and growth values for demonstration
-        wacc_scatter = np.random.uniform(wacc * 0.8, wacc * 1.2, sample_size)
-        growth_scatter = np.random.uniform(terminal_growth_rate * 0.5, min(terminal_growth_rate * 2, 0.04), sample_size)
-        
-        # Filter valid combinations
-        valid_mask = wacc_scatter > growth_scatter
-        wacc_scatter = wacc_scatter[valid_mask]
-        growth_scatter = growth_scatter[valid_mask]
-        sample_values = [sample_values[i] for i, valid in enumerate(valid_mask) if valid]
-        
-        if len(sample_values) > 10:
-            # 3D Scatter plot (most reliable 3D plot type)
-            fig_scatter = go.Figure(data=[go.Scatter3d(
-                x=wacc_scatter * 100,
-                y=growth_scatter * 100,
-                z=sample_values,
-                mode='markers',
-                marker=dict(
-                    size=5,
-                    color=sample_values,
-                    colorscale='Viridis',
-                    opacity=0.8,
-                    showscale=False
-                ),
-                name='Monte Carlo Results'
-            )])
-            
-            # Add base case
-            fig_scatter.add_trace(go.Scatter3d(
-                x=[wacc * 100],
-                y=[terminal_growth_rate * 100],
-                z=[value_per_share],
-                mode='markers',
-                marker=dict(size=12, color='red'),
-                name='Base Case'
-            ))
-            
-            fig_scatter.update_layout(
-                title="3D Monte Carlo Valuation Distribution",
-                scene=dict(
-                    xaxis_title="WACC (%)",
-                    yaxis_title="Terminal Growth (%)",
-                    zaxis_title=f"Value per Share ({currency_symbol})"
-                ),
-                height=600
-            )
-            
-            st.plotly_chart(fig_scatter, use_container_width=True)
-        else:
-            st.info("Insufficient valid data points for 3D scatter plot")
-            
-    except Exception as e:
-        st.error(f"3D scatter plot failed: {str(e)}")
-
-# Simple 3D Bar Chart (Very reliable)
-st.markdown("#### 3D Value Component Analysis")
-
-try:
-    # Create 3D-style bar chart
-    components = ['FCF (1-5)', 'Terminal', 'Net Debt']
-    values = [sum(pv_fcf), pv_terminal_value, -net_debt]
-    colors = ['lightblue', 'lightgreen', 'lightcoral']
+    ))
     
-    fig_3d_bars = go.Figure(data=[go.Bar(
-        x=components,
-        y=values,
-        marker_color=colors,
-        text=[format_currency(v, currency_symbol) for v in values],
-        textposition='auto'
-    )])
+    # Add glowing base case point
+    fig.add_trace(go.Scatter3d(
+        x=[wacc * 100],
+        y=[terminal_growth_rate * 100],
+        z=[value_per_share + np.max(surface_values) * 0.05],  # Slightly elevated
+        mode='markers',
+        marker=dict(
+            size=15,
+            color='#FF6B35',  # Bright orange
+            symbol='diamond',
+            line=dict(color='white', width=3),
+            opacity=1.0
+        ),
+        name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
+        hovertemplate='<b>Base Case DCF</b><br>' +
+                     f'WACC: {wacc*100:.2f}%<br>' +
+                     f'Terminal Growth: {terminal_growth_rate*100:.2f}%<br>' +
+                     f'Value: {format_currency(value_per_share, currency_symbol)}<br>' +
+                     '<extra></extra>'
+    ))
     
-    fig_3d_bars.update_layout(
-        title="DCF Component Breakdown",
-        xaxis_title="Components",
-        yaxis_title=f"Value ({currency_symbol}M)",
-        height=400
+    # Add current market price plane
+    if 'current_market_price' in locals():
+        market_plane = np.full_like(surface_values, current_market_price)
+        fig.add_trace(go.Surface(
+            z=market_plane,
+            x=wacc_mesh * 100,
+            y=terminal_mesh * 100,
+            opacity=0.3,
+            colorscale=[[0, 'rgba(255,0,0,0.3)'], [1, 'rgba(255,0,0,0.3)']],
+            showscale=False,
+            name=f'Market Price: {format_currency(current_market_price, currency_symbol)}'
+        ))
+    
+    # Stunning layout with dark theme
+    fig.update_layout(
+        title=dict(
+            text="<b>3D DCF Sensitivity Analysis</b><br><sub>WACC vs Terminal Growth Impact on Valuation</sub>",
+            font=dict(size=24, color='white'),
+            x=0.5
+        ),
+        scene=dict(
+            xaxis=dict(
+                title=dict(text="WACC (%)", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            yaxis=dict(
+                title=dict(text="Terminal Growth Rate (%)", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            zaxis=dict(
+                title=dict(text=f"Value per Share ({currency_symbol})", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            camera=dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=1.8, y=1.8, z=1.2)  # Perfect viewing angle
+            ),
+            bgcolor='rgba(10,10,20,1)',  # Dark blue background
+            aspectmode='cube'
+        ),
+        paper_bgcolor='rgba(0,0,0,1)',  # Black background
+        plot_bgcolor='rgba(0,0,0,1)',
+        font=dict(color='white'),
+        height=700,
+        margin=dict(l=0, r=0, t=80, b=0),
+        showlegend=True,
+        legend=dict(
+            bgcolor='rgba(0,0,0,0.7)',
+            bordercolor='white',
+            borderwidth=1,
+            font=dict(color='white', size=12)
+        )
     )
     
-    st.plotly_chart(fig_3d_bars, use_container_width=True)
+    # Add subtle animation on load
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=list([
+                    dict(
+                        args=[{"visible": [True, True, True]}],
+                        label="All Layers",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [True, True, False]}],
+                        label="Surface Only",
+                        method="restyle"
+                    )
+                ]),
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.01,
+                xanchor="left",
+                y=1.0,
+                yanchor="top",
+                bgcolor='rgba(0,0,0,0.7)',
+                bordercolor='white',
+                font=dict(color='white')
+            ),
+        ]
+    )
     
+    # Display the plot
+    st.plotly_chart(fig, use_container_width=True, config={
+        'displayModeBar': True,
+        'displaylogo': False,
+        'modeBarButtonsToRemove': ['pan2d', 'lasso2d']
+    })
+    
+    # Add descriptive text below
+    st.markdown(f"""
+    <div style='text-align: center; margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;'>
+        <h4>🎯 Key Insights</h4>
+        <p><strong>Surface Color:</strong> Higher values (yellow/white) = Better valuations | Lower values (purple/black) = Worse valuations</p>
+        <p><strong>Orange Diamond:</strong> Your base case DCF valuation at current assumptions</p>
+        <p><strong>Interactive:</strong> Rotate, zoom, and hover over the surface to explore different scenarios</p>
+    </div>
+    """, unsafe_allow_html=True)
+
 except Exception as e:
-    st.error(f"Component chart failed: {str(e)}")
+    st.error(f"3D visualization failed: {str(e)}")
+    st.info("💡 Tip: Try refreshing the page or check if your data inputs are valid")
 # Performance metrics and model validation
 if st.checkbox("🔍 Show Model Performance Metrics", value=False):
     st.markdown("### 📊 Model Performance & Validation")
