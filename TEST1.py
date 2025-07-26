@@ -1597,14 +1597,7 @@ try:
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
     
     # Create cleaner 3D surface
-    fig_3d_surface = go.Figure()
-    
-    # Add main surface (ultra-simplified)
-    fig_3d_surface.add_trace(go.Surface(
-        z=surface_values,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100
-    ))
+   fig_3d_surface.add_trace(go.Surface(z=surface_values))
     
     # Add contour lines at the base (simplified)
     fig_3d_surface.add_trace(go.Contour(
