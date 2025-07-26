@@ -1569,120 +1569,129 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
     
     # Create improved 3D surface plot for sensitivity analysis
-    try:
-        # Use better resolution and spacing for surface
-        wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
-        terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
-        
-        # Calculate surface values with better error handling
-        surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
-        
-        for i, tg in enumerate(terminal_surface_range):
-            for j, w in enumerate(wacc_surface_range):
-                if w > tg and w > 0.01:  # Valid calculation with minimum WACC
-                    try:
-                        surf_terminal_fcf = fcf_projections[-1] * (1 + tg)
-                        surf_terminal_value = surf_terminal_fcf / (w - tg)
-                        surf_pv_terminal = surf_terminal_value / ((1 + w) ** 5)
-                        surf_pv_fcf = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
-                        surf_enterprise_value = surf_pv_fcf + surf_pv_terminal
-                        surf_equity_value = surf_enterprise_value - net_debt
-                        surface_values[i, j] = max(0, surf_equity_value / shares_outstanding)
-                    except:
-                        surface_values[i, j] = 0
-                else:
+try:
+    # Use better resolution and spacing for surface
+    wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
+    terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
+    
+    # Calculate surface values with better error handling
+    surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
+    
+    for i, tg in enumerate(terminal_surface_range):
+        for j, w in enumerate(wacc_surface_range):
+            if w > tg and w > 0.01:  # Valid calculation with minimum WACC
+                try:
+                    surf_terminal_fcf = fcf_projections[-1] * (1 + tg)
+                    surf_terminal_value = surf_terminal_fcf / (w - tg)
+                    surf_pv_terminal = surf_terminal_value / ((1 + w) ** 5)
+                    surf_pv_fcf = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
+                    surf_enterprise_value = surf_pv_fcf + surf_pv_terminal
+                    surf_equity_value = surf_enterprise_value - net_debt
+                    surface_values[i, j] = max(0, surf_equity_value / shares_outstanding)
+                except:
                     surface_values[i, j] = 0
-        
-        # Clean the surface data
-        surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
-        
-        # Create cleaner 3D surface
-        fig_3d_surface = go.Figure()
-        
-        # Add main surface
-        fig_3d_surface.add_trace(go.Surface(
+            else:
+                surface_values[i, j] = 0
+    
+    # Clean the surface data
+    surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
+    
+    # Create cleaner 3D surface
+    fig_3d_surface = go.Figure()
+    
+    # Add main surface
+    fig_3d_surface.add_trace(go.Surface(
+        z=surface_values,
+        x=wacc_surface_range * 100,
+        y=terminal_surface_range * 100,
+        colorscale='Plasma',
+        opacity=0.9,
+        name='Valuation Surface'
+    ))
+    
+    # Add contour lines at the base (simplified)
+    fig_3d_surface.add_trace(go.Contour(
+        z=surface_values,
+        x=wacc_surface_range * 100,
+        y=terminal_surface_range * 100,
+        colorscale='Plasma',
+        opacity=0.3,
+        showscale=False,
+        name='Value Contours'
+    ))
+    
+    # Add current valuation point with better visibility
+    fig_3d_surface.add_trace(go.Scatter3d(
+        x=[wacc * 100],
+        y=[terminal_growth_rate * 100], 
+        z=[value_per_share + 50],  # Slightly elevated for visibility
+        mode='markers',
+        marker=dict(
+            size=12,
+            color='red',
+            symbol='diamond'
+        ),
+        name='Base Case DCF'
+    ))
+    
+    # Add current market price level as a plane (simplified)
+    market_price_surface = np.full_like(surface_values, current_market_price)
+    fig_3d_surface.add_trace(go.Surface(
+        z=market_price_surface,
+        x=wacc_surface_range * 100,
+        y=terminal_surface_range * 100,
+        colorscale='Reds',
+        showscale=False,
+        opacity=0.3,
+        name='Market Price'
+    ))
+    
+    fig_3d_surface.update_layout(
+        title="3D DCF Sensitivity Analysis",
+        scene=dict(
+            xaxis=dict(
+                title='WACC (%)',
+                showgrid=True
+            ),
+            yaxis=dict(
+                title='Terminal Growth Rate (%)',
+                showgrid=True
+            ),
+            zaxis=dict(
+                title=f'Value per Share ({currency_symbol})',
+                showgrid=True
+            ),
+            camera=dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=2.0, y=2.0, z=1.5)
+            )
+        ),
+        height=700,
+        showlegend=True,
+        margin=dict(l=0, r=0, t=60, b=0)
+    )
+    
+    st.plotly_chart(fig_3d_surface, use_container_width=True)
+except Exception as e:
+    st.error(f"Error creating 3D surface plot: {str(e)}")
+    # Fallback to 2D heatmap
+    try:
+        fig_fallback = go.Figure(data=go.Heatmap(
             z=surface_values,
             x=wacc_surface_range * 100,
             y=terminal_surface_range * 100,
-            colorscale='Plasma',
-            opacity=0.9,
-            name='Valuation Surface'
+            colorscale='Plasma'
         ))
-        
-        # Add contour lines at the base
-        fig_3d_surface.add_trace(go.Contour(
-            z=surface_values,
-            x=wacc_surface_range * 100,
-            y=terminal_surface_range * 100,
-            colorscale='Plasma',
-            opacity=0.3,
-            showscale=False,
-            contours=dict(
-                coloring='lines',
-                showlabels=True
-            ),
-            name='Value Contours'
-        ))
-        
-        # Add current valuation point with better visibility
-        fig_3d_surface.add_trace(go.Scatter3d(
-            x=[wacc * 100],
-            y=[terminal_growth_rate * 100], 
-            z=[value_per_share + 50],  # Slightly elevated for visibility
-            mode='markers',
-            marker=dict(
-                size=12,
-                color='red',
-                symbol='diamond'
-            ),
-            name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
-            text=[f'Base Case DCF<br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.1f}%<br>Value: {format_currency(value_per_share, currency_symbol)}']
-        ))
-        
-        # Add current market price level as a plane
-        market_price_surface = np.full_like(surface_values, current_market_price)
-        fig_3d_surface.add_trace(go.Surface(
-            z=market_price_surface,
-            x=wacc_surface_range * 100,
-            y=terminal_surface_range * 100,
-            colorscale='Reds',
-            showscale=False,
-            opacity=0.3,
-            name='Market Price'
-        ))
-        
-        fig_3d_surface.update_layout(
-            title="3D DCF Sensitivity Analysis: WACC vs Terminal Growth Impact",
-            scene=dict(
-                xaxis=dict(
-                    title='WACC (%)',
-                    showgrid=True,
-                    range=[wacc * 0.75 * 100, wacc * 1.25 * 100]
-                ),
-                yaxis=dict(
-                    title='Terminal Growth Rate (%)',
-                    showgrid=True,
-                    range=[max(terminal_growth_rate * 0.4, 0.005) * 100, min(terminal_growth_rate * 2, 0.045) * 100]
-                ),
-                zaxis=dict(
-                    title=f'Value per Share ({currency_symbol})',
-                    showgrid=True
-                ),
-                camera=dict(
-                    up=dict(x=0, y=0, z=1),
-                    center=dict(x=0, y=0, z=0),
-                    eye=dict(x=2.0, y=2.0, z=1.5)
-                ),
-                aspectratio=dict(x=1, y=1, z=0.8)
-            ),
-            height=700,
-            showlegend=True,
-            margin=dict(l=0, r=0, t=60, b=0)
+        fig_fallback.update_layout(
+            title="2D DCF Sensitivity Analysis (Fallback)",
+            xaxis_title="WACC (%)",
+            yaxis_title="Terminal Growth Rate (%)",
+            height=500
         )
-        
-        st.plotly_chart(fig_3d_surface, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error creating 3D surface plot: {str(e)}")
+        st.plotly_chart(fig_fallback, use_container_width=True)
+    except:
+        st.error("Unable to create any sensitivity analysis plot.")
     
     # Interactive controls for 3D exploration
     st.markdown("#### 🎮 Interactive DCF Explorer")
