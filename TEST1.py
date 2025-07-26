@@ -1594,20 +1594,19 @@ try:
     # Calculate surface with optimal resolution
     wacc_range = np.linspace(wacc * 0.7, wacc * 1.3, 30)
     terminal_range = np.linspace(max(terminal_growth_rate * 0.3, 0.005), min(terminal_growth_rate * 2.5, 0.05), 30)
-    
+
     # Create meshgrid for surface
     wacc_mesh, terminal_mesh = np.meshgrid(wacc_range, terminal_range)
     surface_values = np.zeros_like(wacc_mesh)
-    
+
     # Calculate valuation surface
     for i in range(wacc_mesh.shape[0]):
         for j in range(wacc_mesh.shape[1]):
             w = wacc_mesh[i, j]
             tg = terminal_mesh[i, j]
-            
+
             if w > tg and w > 0.01:
                 try:
-                    # DCF calculation
                     terminal_fcf = fcf_projections[-1] * (1 + tg)
                     terminal_val = terminal_fcf / (w - tg)
                     pv_terminal = terminal_val / ((1 + w) ** 5)
@@ -1619,19 +1618,19 @@ try:
                     surface_values[i, j] = 0
             else:
                 surface_values[i, j] = 0
-    
+
     # Clean and smooth the data
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
-    
+
     # Create the stunning 3D plot
     fig = go.Figure()
-    
+
     # Main surface with beautiful gradient
     fig.add_trace(go.Surface(
         z=surface_values,
         x=wacc_mesh * 100,
         y=terminal_mesh * 100,
-        colorscale='plasma',  # Beautiful purple-pink-yellow gradient
+        colorscale='plasma',
         opacity=0.85,
         lighting=dict(
             ambient=0.4,
@@ -1655,80 +1654,85 @@ try:
             tickfont=dict(color='white', size=12)
         )
     ))
-    
+
     # Add glowing base case point
-fig.add_trace(go.Scatter3d(
-    x=[wacc * 100],
-    y=[terminal_growth_rate * 100],
-    z=[value_per_share + np.max(surface_values) * 0.05],  # Slightly elevated
-    mode='markers',
-    marker=dict(
-        size=15,
-        color='#FF6B35',  # Bright orange
-        symbol='diamond',
-        line=dict(color='white', width=3),
-        opacity=1.0
-    ),
-    name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
-    hovertemplate='<b>Base Case DCF</b><br>' +
-                 f'WACC: {wacc*100:.2f}%<br>' +
-                 f'Terminal Growth: {terminal_growth_rate*100:.2f}%<br>' +
-                 f'Value: {format_currency(value_per_share, currency_symbol)}<br>' +
-                 '<extra></extra>'
-))
+    fig.add_trace(go.Scatter3d(
+        x=[wacc * 100],
+        y=[terminal_growth_rate * 100],
+        z=[value_per_share + np.max(surface_values) * 0.05],
+        mode='markers',
+        marker=dict(
+            size=15,
+            color='#FF6B35',
+            symbol='diamond',
+            line=dict(color='white', width=3),
+            opacity=1.0
+        ),
+        name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
+        hovertemplate='<b>Base Case DCF</b><br>' +
+                      f'WACC: {wacc*100:.2f}%<br>' +
+                      f'Terminal Growth: {terminal_growth_rate*100:.2f}%<br>' +
+                      f'Value: {format_currency(value_per_share, currency_symbol)}<br>' +
+                      '<extra></extra>'
+    ))
 
-# ✅ Set scene and layout separately
-fig.update_layout(
-    scene=dict(
-        xaxis=dict(
-            title=dict(text="WACC (%)", font=dict(size=16, color='white')),
-            tickfont=dict(color='white', size=12),
-            gridcolor='rgba(255,255,255,0.2)',
-            showbackground=True,
-            backgroundcolor='rgba(0,0,0,0.3)'
+    # Set layout and scene
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(
+                title=dict(text="WACC (%)", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            yaxis=dict(
+                title=dict(text="Terminal Growth Rate (%)", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            zaxis=dict(
+                title=dict(text=f"Value per Share ({currency_symbol})", font=dict(size=16, color='white')),
+                tickfont=dict(color='white', size=12),
+                gridcolor='rgba(255,255,255,0.2)',
+                showbackground=True,
+                backgroundcolor='rgba(0,0,0,0.3)'
+            ),
+            camera=dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=1.8, y=1.8, z=1.2)
+            ),
+            bgcolor='rgba(10,10,20,1)',
+            aspectmode='cube'
         ),
-        yaxis=dict(
-            title=dict(text="Terminal Growth Rate (%)", font=dict(size=16, color='white')),
-            tickfont=dict(color='white', size=12),
-            gridcolor='rgba(255,255,255,0.2)',
-            showbackground=True,
-            backgroundcolor='rgba(0,0,0,0.3)'
-        ),
-        zaxis=dict(
-            title=dict(text=f"Value per Share ({currency_symbol})", font=dict(size=16, color='white')),
-            tickfont=dict(color='white', size=12),
-            gridcolor='rgba(255,255,255,0.2)',
-            showbackground=True,
-            backgroundcolor='rgba(0,0,0,0.3)'
-        ),
-        camera=dict(
-            up=dict(x=0, y=0, z=1),
-            center=dict(x=0, y=0, z=0),
-            eye=dict(x=1.8, y=1.8, z=1.2)
-        ),
-        bgcolor='rgba(10,10,20,1)',
-        aspectmode='cube'
-    ),
-    paper_bgcolor='rgba(0,0,0,1)',  # Background of the entire plot
-    plot_bgcolor='rgba(0,0,0,1)',   # Background of plotting area
-    font=dict(color='white'),
-    height=700,
-    margin=dict(l=0, r=0, t=80, b=0),
-    showlegend=True,
-    legend=dict(
-        bgcolor='rgba(0,0,0,0.7)',
-        bordercolor='white',
-        borderwidth=1,
-        font=dict(color='white', size=12)
+        paper_bgcolor='rgba(0,0,0,1)',
+        plot_bgcolor='rgba(0,0,0,1)',
+        font=dict(color='white'),
+        height=700,
+        margin=dict(l=0, r=0, t=80, b=0),
+        showlegend=True,
+        legend=dict(
+            bgcolor='rgba(0,0,0,0.7)',
+            bordercolor='white',
+            borderwidth=1,
+            font=dict(color='white', size=12)
+        )
     )
-)
 
-# ✅ Render in Streamlit
-st.plotly_chart(fig, use_container_width=True, config={
-    'displayModeBar': True,
-    'displaylogo': False,
-    'modeBarButtonsToRemove': ['pan2d', 'lasso2d']
-})
+    # Show in Streamlit
+    st.plotly_chart(fig, use_container_width=True, config={
+        'displayModeBar': True,
+        'displaylogo': False,
+        'modeBarButtonsToRemove': ['pan2d', 'lasso2d']
+    })
+
+except Exception as e:
+    st.error(f"3D visualization failed: {str(e)}")
+    st.info("💡 Tip: Try refreshing the page or check if your data inputs are valid.")
+
 
 # Performance metrics and model validation
 if st.checkbox("🔍 Show Model Performance Metrics", value=False):
