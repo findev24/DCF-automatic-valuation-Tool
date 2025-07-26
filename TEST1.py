@@ -1515,7 +1515,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                     hovertemplate='%{text}<extra></extra>'
                 ))
                 
-                # Enhanced dark theme layout
+                # Enhanced dark theme layout with BLACK background
                 fig_3d_scatter.update_layout(
                     scene=dict(
                         xaxis=dict(
@@ -1525,7 +1525,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                             gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
                             gridwidth=2,
                             showbackground=True,
-                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            backgroundcolor='rgba(0,0,0,0.8)',  # BLACK background
                             tickfont=dict(color='white', size=11)
                         ),
                         yaxis=dict(
@@ -1535,7 +1535,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                             gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
                             gridwidth=2,
                             showbackground=True,
-                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            backgroundcolor='rgba(0,0,0,0.8)',  # BLACK background
                             tickfont=dict(color='white', size=11)
                         ),
                         zaxis=dict(
@@ -1544,7 +1544,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                             gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
                             gridwidth=2,
                             showbackground=True,
-                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            backgroundcolor='rgba(0,0,0,0.8)',  # BLACK background
                             tickfont=dict(color='white', size=11)
                         ),
                         camera=dict(
@@ -1552,11 +1552,11 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                             center=dict(x=0, y=0, z=0),
                             eye=dict(x=1.8, y=1.8, z=1.2)
                         ),
-                        bgcolor='rgba(5,15,35,1)',  # Much darker blue background
+                        bgcolor='rgba(0,0,0,1)',  # BLACK scene background
                         aspectmode='cube'
                     ),
                     paper_bgcolor='rgba(0,0,0,1)',  # Black paper background
-                    plot_bgcolor='rgba(5,15,35,1)',  # Dark blue plot background
+                    plot_bgcolor='rgba(0,0,0,1)',  # BLACK plot background
                     font=dict(color='white'),
                     height=700,  # Increased height
                     showlegend=True,
