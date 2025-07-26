@@ -1584,30 +1584,6 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                     }
                 })
                 
-                # Add enhanced info box
-                st.markdown(f"""
-                <div style='text-align: center; margin-top: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #0f3460 0%, #1e3a8a 50%, #1e40af 100%); border-radius: 12px; color: white; box-shadow: 0 8px 16px rgba(0,0,0,0.3);'>
-                    <h4 style='margin-top: 0;'>🎯 Enhanced 3D Visualization Insights</h4>
-                    <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;'>
-                        <div>
-                            <strong>🔵 Blue Points:</strong><br>
-                            Monte Carlo scenarios with deeper blue shading for enhanced contrast
-                        </div>
-                        <div>
-                            <strong>🔶 Orange Diamond:</strong><br>
-                            Your base case DCF at current assumptions
-                        </div>
-                        <div>
-                            <strong>🌊 Blue Plane:</strong><br>
-                            Current market price reference with enhanced transparency
-                        </div>
-                        <div>
-                            <strong>🎮 Interactive:</strong><br>
-                            Rotate, zoom, hover for detailed scenario analysis
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
                 
             else:
                 st.warning("Insufficient valid data points for 3D Monte Carlo visualization.")
