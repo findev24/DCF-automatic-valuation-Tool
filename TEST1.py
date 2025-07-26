@@ -1427,274 +1427,262 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                 rg = growth_mesh[i,j,k]
                 
                 if w > tg:  # Valid calculation
-                    # Adjust FCF based on revenue growth
-                    adj_fcf = [fcf * (1 + (rg - revenue_growth_rates[idx]) * 0.5) for idx, fcf in enumerate(fcf_projections)]
-                    adj_terminal_fcf = adj_fcf[-1] * (1 + tg)
-                    
-                    # Calculate enterprise value
-                    pv_fcf_3d = sum([fcf / ((1 + w) ** idx) for idx, fcf in enumerate(adj_fcf, 1)])
-                    terminal_val_3d = adj_terminal_fcf / (w - tg)
-                    pv_terminal_3d = terminal_val_3d / ((1 + w) ** 5)
-                    
-                    enterprise_val_3d = pv_fcf_3d + pv_terminal_3d
-                    equity_val_3d = enterprise_val_3d - net_debt
-                    valuation_surface[i,j,k] = equity_val_3d / shares_outstanding
+                    try:
+                        # Adjust FCF based on revenue growth
+                        adj_fcf = [fcf * (1 + (rg - revenue_growth_rates[idx]) * 0.5) for idx, fcf in enumerate(fcf_projections)]
+                        adj_terminal_fcf = adj_fcf[-1] * (1 + tg)
+                        
+                        # Calculate enterprise value
+                        pv_fcf_3d = sum([fcf / ((1 + w) ** idx) for idx, fcf in enumerate(adj_fcf, 1)])
+                        terminal_val_3d = adj_terminal_fcf / (w - tg)
+                        pv_terminal_3d = terminal_val_3d / ((1 + w) ** 5)
+                        
+                        enterprise_val_3d = pv_fcf_3d + pv_terminal_3d
+                        equity_val_3d = enterprise_val_3d - net_debt
+                        valuation_surface[i,j,k] = max(0, equity_val_3d / shares_outstanding)
+                    except:
+                        valuation_surface[i,j,k] = 0
                 else:
                     valuation_surface[i,j,k] = 0
     
     # Create 3D scatter plot for Monte Carlo results
     if run_monte_carlo and simulation_results and len(simulation_results) > 100:
-        # Sample points for visualization with better distribution
-        sample_size = min(500, len(simulation_results))  # Reduced for less clustering
-        sample_indices = np.random.choice(len(simulation_results), sample_size, replace=False)
-        sample_values = [simulation_results[i] for i in sample_indices]
-        
-        # Create more spread out variations for better visualization
-        wacc_min, wacc_max = wacc * 0.7, wacc * 1.3
-        terminal_min, terminal_max = max(terminal_growth_rate * 0.3, 0.005), min(terminal_growth_rate * 2.5, 0.05)
-        
-        # Use uniform distribution for better spread
-        wacc_scatter = np.random.uniform(wacc_min, wacc_max, sample_size)
-        terminal_scatter = np.random.uniform(terminal_min, terminal_max, sample_size)
-        
-        # Filter out invalid combinations (WACC <= Terminal Growth)
-        valid_indices = wacc_scatter > terminal_scatter
-        wacc_scatter = wacc_scatter[valid_indices]
-        terminal_scatter = terminal_scatter[valid_indices]
-        sample_values = [sample_values[i] for i, valid in enumerate(valid_indices) if valid]
-        
-        # Create size variation based on probability density
-        marker_sizes = []
-        for v in sample_values:
-            if abs(v - np.median(simulation_results)) < np.std(simulation_results) * 0.5:
-                marker_sizes.append(8)  # Larger for values near median
-            elif abs(v - np.median(simulation_results)) < np.std(simulation_results):
-                marker_sizes.append(6)  # Medium size
+        try:
+            # Sample points for visualization with better distribution
+            sample_size = min(500, len(simulation_results))  # Reduced for less clustering
+            sample_indices = np.random.choice(len(simulation_results), sample_size, replace=False)
+            sample_values = [simulation_results[i] for i in sample_indices]
+            
+            # Create more spread out variations for better visualization
+            wacc_min, wacc_max = wacc * 0.7, wacc * 1.3
+            terminal_min, terminal_max = max(terminal_growth_rate * 0.3, 0.005), min(terminal_growth_rate * 2.5, 0.05)
+            
+            # Use uniform distribution for better spread
+            wacc_scatter = np.random.uniform(wacc_min, wacc_max, sample_size)
+            terminal_scatter = np.random.uniform(terminal_min, terminal_max, sample_size)
+            
+            # Filter out invalid combinations (WACC <= Terminal Growth)
+            valid_indices = wacc_scatter > terminal_scatter
+            wacc_scatter = wacc_scatter[valid_indices]
+            terminal_scatter = terminal_scatter[valid_indices]
+            sample_values = [sample_values[i] for i, valid in enumerate(valid_indices) if valid]
+            
+            # Ensure we have valid data
+            if len(sample_values) > 0 and len(wacc_scatter) > 0:
+                # Create size variation based on probability density
+                marker_sizes = []
+                for v in sample_values:
+                    if abs(v - np.median(simulation_results)) < np.std(simulation_results) * 0.5:
+                        marker_sizes.append(8)  # Larger for values near median
+                    elif abs(v - np.median(simulation_results)) < np.std(simulation_results):
+                        marker_sizes.append(6)  # Medium size
+                    else:
+                        marker_sizes.append(4)  # Smaller for outliers
+                
+                # Ensure all arrays have the same length
+                min_length = min(len(wacc_scatter), len(terminal_scatter), len(sample_values), len(marker_sizes))
+                wacc_scatter = wacc_scatter[:min_length]
+                terminal_scatter = terminal_scatter[:min_length]
+                sample_values = sample_values[:min_length]
+                marker_sizes = marker_sizes[:min_length]
+                
+                fig_3d_scatter = go.Figure(data=[go.Scatter3d(
+                    x=wacc_scatter * 100,
+                    y=terminal_scatter * 100,
+                    z=sample_values,
+                    mode='markers',
+                    marker=dict(
+                        size=marker_sizes,
+                        color=sample_values,
+                        colorscale='Viridis',
+                        opacity=0.7,
+                        showscale=True
+                    ),
+                    text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
+                          for w, tg, v in zip(wacc_scatter, terminal_scatter, sample_values)],
+                    name='Monte Carlo Results'
+                )])
+                
+                # Add current market price reference plane (simplified)
+                wacc_range_viz = np.linspace(wacc_min * 100, wacc_max * 100, 10)
+                terminal_range_viz = np.linspace(terminal_min * 100, terminal_max * 100, 10)
+                wacc_plane, terminal_plane = np.meshgrid(wacc_range_viz, terminal_range_viz)
+                price_plane = np.full_like(wacc_plane, current_market_price)
+                
+                fig_3d_scatter.add_trace(go.Surface(
+                    x=wacc_plane,
+                    y=terminal_plane,
+                    z=price_plane,
+                    colorscale='Blues',
+                    showscale=False,
+                    opacity=0.3,
+                    name='Current Market Price'
+                ))
+                
+                # Add base case point
+                fig_3d_scatter.add_trace(go.Scatter3d(
+                    x=[wacc * 100],
+                    y=[terminal_growth_rate * 100],
+                    z=[value_per_share],
+                    mode='markers',
+                    marker=dict(
+                        size=15,
+                        color='red',
+                        symbol='diamond'
+                    ),
+                    name='Base Case DCF',
+                    text=[f'Base Case DCF<br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.2f}%<br>Value: {format_currency(value_per_share, currency_symbol)}']
+                ))
+                
+                fig_3d_scatter.update_layout(
+                    title="3D Monte Carlo Valuation Distribution",
+                    scene=dict(
+                        xaxis=dict(
+                            title='WACC (%)',
+                            range=[wacc_min * 100, wacc_max * 100],
+                            showgrid=True
+                        ),
+                        yaxis=dict(
+                            title='Terminal Growth Rate (%)',
+                            range=[terminal_min * 100, terminal_max * 100],
+                            showgrid=True
+                        ),
+                        zaxis=dict(
+                            title=f'Value per Share ({currency_symbol})',
+                            showgrid=True
+                        ),
+                        camera=dict(
+                            up=dict(x=0, y=0, z=1),
+                            center=dict(x=0, y=0, z=0),
+                            eye=dict(x=1.8, y=1.8, z=1.2)
+                        )
+                    ),
+                    height=650,
+                    showlegend=True,
+                    margin=dict(l=0, r=0, t=50, b=0)
+                )
+                
+                st.plotly_chart(fig_3d_scatter, use_container_width=True)
             else:
-                marker_sizes.append(4)  # Smaller for outliers
+                st.warning("Insufficient valid data points for 3D Monte Carlo visualization.")
+        except Exception as e:
+            st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
+    
+    # Create improved 3D surface plot for sensitivity analysis
+    try:
+        # Use better resolution and spacing for surface
+        wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
+        terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
         
-        fig_3d_scatter = go.Figure(data=[go.Scatter3d(
-    x=wacc_scatter * 100,
-    y=terminal_scatter * 100,
-    z=sample_values,
-    mode='markers',
-    marker=dict(
-        size=marker_sizes,
-        color=sample_values,
-        colorscale='Viridis',
-        opacity=0.7,
-        showscale=True,
-        line=dict(color='white', width=0.5)
-    ),
-    text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
-          for w, tg, v in zip(wacc_scatter, terminal_scatter, sample_values)],
-    hovertemplate='<b>Scenario Analysis</b><br>%{text}<extra></extra>',
-    name='Monte Carlo Results'
-)])
+        # Calculate surface values with better error handling
+        surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
         
-        # Add current market price reference plane
-        wacc_range_viz = np.linspace(wacc_min * 100, wacc_max * 100, 10)
-        terminal_range_viz = np.linspace(terminal_min * 100, terminal_max * 100, 10)
-        wacc_plane, terminal_plane = np.meshgrid(wacc_range_viz, terminal_range_viz)
-        price_plane = np.full_like(wacc_plane, current_market_price)
+        for i, tg in enumerate(terminal_surface_range):
+            for j, w in enumerate(wacc_surface_range):
+                if w > tg and w > 0.01:  # Valid calculation with minimum WACC
+                    try:
+                        surf_terminal_fcf = fcf_projections[-1] * (1 + tg)
+                        surf_terminal_value = surf_terminal_fcf / (w - tg)
+                        surf_pv_terminal = surf_terminal_value / ((1 + w) ** 5)
+                        surf_pv_fcf = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
+                        surf_enterprise_value = surf_pv_fcf + surf_pv_terminal
+                        surf_equity_value = surf_enterprise_value - net_debt
+                        surface_values[i, j] = max(0, surf_equity_value / shares_outstanding)
+                    except:
+                        surface_values[i, j] = 0
+                else:
+                    surface_values[i, j] = 0
         
-        fig_3d_scatter.add_trace(go.Surface(
-            x=wacc_plane,
-            y=terminal_plane,
-            z=price_plane,
-            colorscale=[[0, 'rgba(0,100,200,0.3)'], [1, 'rgba(0,100,200,0.3)']],
-            showscale=False,
-            name=f'Current Market Price',
-            hovertemplate=f'Current Market Price: {format_currency(current_market_price, currency_symbol)}<extra></extra>'
+        # Clean the surface data
+        surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
+        
+        # Create cleaner 3D surface
+        fig_3d_surface = go.Figure()
+        
+        # Add main surface
+        fig_3d_surface.add_trace(go.Surface(
+            z=surface_values,
+            x=wacc_surface_range * 100,
+            y=terminal_surface_range * 100,
+            colorscale='Plasma',
+            opacity=0.9,
+            name='Valuation Surface'
         ))
         
-        # Add base case point
-        fig_3d_scatter.add_trace(go.Scatter3d(
+        # Add contour lines at the base
+        fig_3d_surface.add_trace(go.Contour(
+            z=surface_values,
+            x=wacc_surface_range * 100,
+            y=terminal_surface_range * 100,
+            colorscale='Plasma',
+            opacity=0.3,
+            showscale=False,
+            contours=dict(
+                coloring='lines',
+                showlabels=True
+            ),
+            name='Value Contours'
+        ))
+        
+        # Add current valuation point with better visibility
+        fig_3d_surface.add_trace(go.Scatter3d(
             x=[wacc * 100],
-            y=[terminal_growth_rate * 100],
-            z=[value_per_share],
+            y=[terminal_growth_rate * 100], 
+            z=[value_per_share + 50],  # Slightly elevated for visibility
             mode='markers',
             marker=dict(
-                size=15,
+                size=12,
                 color='red',
-                symbol='diamond',
-                line=dict(color='white', width=2)
+                symbol='diamond'
             ),
-            name=f'Base Case DCF',
-            text=[f'Base Case DCF<br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.2f}%<br>Value: {format_currency(value_per_share, currency_symbol)}'],
-            hovertemplate='<b>%{text}</b><extra></extra>'
+            name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
+            text=[f'Base Case DCF<br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.1f}%<br>Value: {format_currency(value_per_share, currency_symbol)}']
         ))
         
-        fig_3d_scatter.update_layout(
-            title="3D Monte Carlo Valuation Distribution",
+        # Add current market price level as a plane
+        market_price_surface = np.full_like(surface_values, current_market_price)
+        fig_3d_surface.add_trace(go.Surface(
+            z=market_price_surface,
+            x=wacc_surface_range * 100,
+            y=terminal_surface_range * 100,
+            colorscale='Reds',
+            showscale=False,
+            opacity=0.3,
+            name='Market Price'
+        ))
+        
+        fig_3d_surface.update_layout(
+            title="3D DCF Sensitivity Analysis: WACC vs Terminal Growth Impact",
             scene=dict(
                 xaxis=dict(
                     title='WACC (%)',
-                    tickformat='.1f',
-                    range=[wacc_min * 100, wacc_max * 100],
                     showgrid=True,
-                    gridcolor='rgba(255,255,255,0.2)'
+                    range=[wacc * 0.75 * 100, wacc * 1.25 * 100]
                 ),
                 yaxis=dict(
                     title='Terminal Growth Rate (%)',
-                    tickformat='.1f', 
-                    range=[terminal_min * 100, terminal_max * 100],
                     showgrid=True,
-                    gridcolor='rgba(255,255,255,0.2)'
+                    range=[max(terminal_growth_rate * 0.4, 0.005) * 100, min(terminal_growth_rate * 2, 0.045) * 100]
                 ),
                 zaxis=dict(
                     title=f'Value per Share ({currency_symbol})',
-                    tickformat='.0f',
-                    showgrid=True,
-                    gridcolor='rgba(255,255,255,0.2)'
+                    showgrid=True
                 ),
                 camera=dict(
                     up=dict(x=0, y=0, z=1),
                     center=dict(x=0, y=0, z=0),
-                    eye=dict(x=1.8, y=1.8, z=1.2)  # Better viewing angle
+                    eye=dict(x=2.0, y=2.0, z=1.5)
                 ),
-                bgcolor='rgba(0,0,0,0.8)'
+                aspectratio=dict(x=1, y=1, z=0.8)
             ),
-            height=650,
+            height=700,
             showlegend=True,
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01
-            ),
-            margin=dict(l=0, r=0, t=50, b=0)
+            margin=dict(l=0, r=0, t=60, b=0)
         )
         
-        st.plotly_chart(fig_3d_scatter, use_container_width=True)
-    
-    # Create improved 3D surface plot for sensitivity analysis
-    # Use better resolution and spacing for surface
-    wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
-    terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
-    
-    # Calculate surface values with better error handling
-    surface_values = np.zeros((len(terminal_surface_range), len(wacc_surface_range)))
-    
-    for i, tg in enumerate(terminal_surface_range):
-        for j, w in enumerate(wacc_surface_range):
-            if w > tg and w > 0.01:  # Valid calculation with minimum WACC
-                try:
-                    surf_terminal_fcf = fcf_projections[-1] * (1 + tg)
-                    surf_terminal_value = surf_terminal_fcf / (w - tg)
-                    surf_pv_terminal = surf_terminal_value / ((1 + w) ** 5)
-                    surf_pv_fcf = sum([fcf / ((1 + w) ** k) for k, fcf in enumerate(fcf_projections, 1)])
-                    surf_enterprise_value = surf_pv_fcf + surf_pv_terminal
-                    surf_equity_value = surf_enterprise_value - net_debt
-                    surface_values[i, j] = max(0, surf_equity_value / shares_outstanding)
-                except:
-                    surface_values[i, j] = 0
-            else:
-                surface_values[i, j] = 0
-    
-    # Create cleaner 3D surface
-    fig_3d_surface = go.Figure()
-    
-    # Add main surface
-    fig_3d_surface.add_trace(go.Surface(
-    z=surface_values,
-    x=wacc_surface_range * 100,
-    y=terminal_surface_range * 100,
-    colorscale='Plasma',
-    showscale=True,
-    opacity=0.9,
-    name='Valuation Surface',
-    hovertemplate='WACC: %{x:.1f}%<br>Terminal Growth: %{y:.1f}%<br>Value: $%{z:.0f}<extra></extra>'
-))
-    
-    # Add contour lines at the base
-    fig_3d_surface.add_trace(go.Contour(
-        z=surface_values,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100,
-        colorscale='Plasma',
-        opacity=0.3,
-        showscale=False,
-        contours=dict(
-            coloring='lines',
-            showlabels=True
-        ),
-        name='Value Contours'
-    ))
-    
-    
-    # Add current valuation point with better visibility
-    fig_3d_surface.add_trace(go.Scatter3d(
-        x=[wacc * 100],
-        y=[terminal_growth_rate * 100], 
-        z=[value_per_share + 50],  # Slightly elevated for visibility
-        mode='markers',
-        marker=dict(
-            size=12,
-            color='red',
-            symbol='diamond',
-            line=dict(color='white', width=3)
-        ),
-        name=f'Base Case: {format_currency(value_per_share, currency_symbol)}',
-        text=[f'<b>Base Case DCF</b><br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.1f}%<br>Value: {format_currency(value_per_share, currency_symbol)}'],
-        hovertemplate='%{text}<extra></extra>'
-    ))
-    
-    # Add current market price level as a plane
-    market_price_surface = np.full_like(surface_values, current_market_price)
-    fig_3d_surface.add_trace(go.Surface(
-        z=market_price_surface,
-        x=wacc_surface_range * 100,
-        y=terminal_surface_range * 100,
-        colorscale=[[0, 'rgba(255,0,0,0.2)'], [1, 'rgba(255,0,0,0.2)']],
-        showscale=False,
-        opacity=0.3,
-        name=f'Market Price: {format_currency(current_market_price, currency_symbol)}'
-    ))
-    
-    fig_3d_surface.update_layout(
-        title="3D DCF Sensitivity Analysis: WACC vs Terminal Growth Impact",
-        scene=dict(
-            xaxis=dict(
-                title='WACC (%)',
-                tickformat='.1f',
-                showgrid=True,
-                gridcolor='rgba(255,255,255,0.3)',
-                range=[wacc * 0.75 * 100, wacc * 1.25 * 100]
-            ),
-            yaxis=dict(
-                title='Terminal Growth Rate (%)',
-                tickformat='.1f',
-                showgrid=True,
-                gridcolor='rgba(255,255,255,0.3)',
-                range=[max(terminal_growth_rate * 0.4, 0.005) * 100, min(terminal_growth_rate * 2, 0.045) * 100]
-            ),
-            zaxis=dict(
-                title=f'Value per Share ({currency_symbol})',
-                tickformat='.0f',
-                showgrid=True,
-                gridcolor='rgba(255,255,255,0.3)'
-            ),
-            camera=dict(
-                up=dict(x=0, y=0, z=1),
-                center=dict(x=0, y=0, z=0),
-                eye=dict(x=2.0, y=2.0, z=1.5)  # Better angle for surface viewing
-            ),
-            bgcolor='rgba(0,0,0,0.9)',
-            aspectratio=dict(x=1, y=1, z=0.8)  # Better proportions
-        ),
-        height=700,
-        showlegend=True,
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="right", 
-            x=0.99
-        ),
-        margin=dict(l=0, r=0, t=60, b=0)
-    )
-    
-    st.plotly_chart(fig_3d_surface, use_container_width=True)
+        st.plotly_chart(fig_3d_surface, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error creating 3D surface plot: {str(e)}")
     
     # Interactive controls for 3D exploration
     st.markdown("#### 🎮 Interactive DCF Explorer")
@@ -1730,78 +1718,82 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
     
     # Calculate interactive valuation
     if interactive_wacc > interactive_terminal:
-        # Adjust FCF based on growth change
-        growth_multiplier = 1 + (interactive_growth - revenue_growth_rates[0]) * 0.5
-        interactive_fcf = [fcf * growth_multiplier for fcf in fcf_projections]
-        interactive_terminal_fcf = interactive_fcf[-1] * (1 + interactive_terminal)
-        
-        # Calculate valuation
-        interactive_pv_fcf = sum([fcf / ((1 + interactive_wacc) ** i) for i, fcf in enumerate(interactive_fcf, 1)])
-        interactive_terminal_value = interactive_terminal_fcf / (interactive_wacc - interactive_terminal)
-        interactive_pv_terminal = interactive_terminal_value / ((1 + interactive_wacc) ** 5)
-        
-        interactive_enterprise_value = interactive_pv_fcf + interactive_pv_terminal
-        interactive_equity_value = interactive_enterprise_value - net_debt
-        interactive_value_per_share = interactive_equity_value / shares_outstanding
-        
-        interactive_upside = (interactive_value_per_share - current_market_price) / current_market_price
-        
-        # Display interactive results
-        st.markdown(f"""
-        <div class="valuation-highlight" style='background: linear-gradient(135deg, {"#16a34a" if interactive_upside > 0 else "#dc2626"} 0%, {"#22c55e" if interactive_upside > 0 else "#ef4444"} 100%);'>
-            <h3 style='margin: 0;'>Interactive Valuation Result</h3>
-            <h1 style='font-size: 2.5rem; margin: 1rem 0;'>{format_currency(interactive_value_per_share, currency_symbol)}</h1>
-            <p style='margin: 0; font-size: 1.2rem;'>
-                {"Upside" if interactive_upside > 0 else "Downside"}: {abs(interactive_upside)*100:.1f}% 
-                vs Current Price ({format_currency(current_market_price, currency_symbol)})
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Show impact breakdown
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            wacc_impact = (interactive_wacc - wacc) * 100
-            st.metric("WACC Impact", f"{wacc_impact:+.2f}%", f"vs Base: {wacc*100:.2f}%")
-        
-        with col2:
-            growth_impact = (interactive_terminal - terminal_growth_rate) * 100
-            st.metric("Terminal Growth Impact", f"{growth_impact:+.2f}%", f"vs Base: {terminal_growth_rate*100:.1f}%")
-        
-        with col3:
-            revenue_impact = (interactive_growth - revenue_growth_rates[0]) * 100
-            st.metric("Revenue Growth Impact", f"{revenue_impact:+.1f}%", f"vs Base: {revenue_growth_rates[0]*100:.1f}%")
-        
+        try:
+            # Adjust FCF based on growth change
+            growth_multiplier = 1 + (interactive_growth - revenue_growth_rates[0]) * 0.5
+            interactive_fcf = [fcf * growth_multiplier for fcf in fcf_projections]
+            interactive_terminal_fcf = interactive_fcf[-1] * (1 + interactive_terminal)
+            
+            # Calculate valuation
+            interactive_pv_fcf = sum([fcf / ((1 + interactive_wacc) ** i) for i, fcf in enumerate(interactive_fcf, 1)])
+            interactive_terminal_value = interactive_terminal_fcf / (interactive_wacc - interactive_terminal)
+            interactive_pv_terminal = interactive_terminal_value / ((1 + interactive_wacc) ** 5)
+            
+            interactive_enterprise_value = interactive_pv_fcf + interactive_pv_terminal
+            interactive_equity_value = interactive_enterprise_value - net_debt
+            interactive_value_per_share = interactive_equity_value / shares_outstanding
+            
+            interactive_upside = (interactive_value_per_share - current_market_price) / current_market_price
+            
+            # Display interactive results
+            st.markdown(f"""
+            <div class="valuation-highlight" style='background: linear-gradient(135deg, {"#16a34a" if interactive_upside > 0 else "#dc2626"} 0%, {"#22c55e" if interactive_upside > 0 else "#ef4444"} 100%);'>
+                <h3 style='margin: 0;'>Interactive Valuation Result</h3>
+                <h1 style='font-size: 2.5rem; margin: 1rem 0;'>{format_currency(interactive_value_per_share, currency_symbol)}</h1>
+                <p style='margin: 0; font-size: 1.2rem;'>
+                    {"Upside" if interactive_upside > 0 else "Downside"}: {abs(interactive_upside)*100:.1f}% 
+                    vs Current Price ({format_currency(current_market_price, currency_symbol)})
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Show impact breakdown
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                wacc_impact = (interactive_wacc - wacc) * 100
+                st.metric("WACC Impact", f"{wacc_impact:+.2f}%", f"vs Base: {wacc*100:.2f}%")
+            
+            with col2:
+                growth_impact = (interactive_terminal - terminal_growth_rate) * 100
+                st.metric("Terminal Growth Impact", f"{growth_impact:+.2f}%", f"vs Base: {terminal_growth_rate*100:.1f}%")
+            
+            with col3:
+                revenue_impact = (interactive_growth - revenue_growth_rates[0]) * 100
+                st.metric("Revenue Growth Impact", f"{revenue_impact:+.1f}%", f"vs Base: {revenue_growth_rates[0]*100:.1f}%")
+        except Exception as e:
+            st.error(f"Error in interactive valuation calculation: {str(e)}")
     else:
         st.error("⚠️ Invalid parameters: WACC must be greater than Terminal Growth Rate for valuation calculation.")
     
     # Value driver waterfall in 3D
     st.markdown("#### 🌊 3D Value Driver Analysis")
     
-    # Calculate component contributions
-    components = ['FCF Years 1-5', 'Terminal Value', 'Net Debt Impact', 'Share Count Impact']
-    base_components = [sum(pv_fcf), pv_terminal_value, -net_debt, 0]  # Share count is already in per-share calc
-    
-    # Create 3D bar chart
-    fig_3d_bars = go.Figure(data=[go.Bar(
-        x=components,
-        y=base_components,
-        marker_color=['#4ade80', '#22c55e', '#ef4444', '#6b7280'],
-        text=[format_currency(comp, currency_symbol) for comp in base_components],
-        textposition='auto'
-    )])
-    
-    fig_3d_bars.update_layout(
-        title="DCF Value Component Breakdown",
-        xaxis_title="Value Components", 
-        yaxis_title=f"Contribution ({currency_symbol}M)",
-        template="plotly_white",
-        height=400
-    )
-    
-    st.plotly_chart(fig_3d_bars, use_container_width=True)
-
+    try:
+        # Calculate component contributions
+        components = ['FCF Years 1-5', 'Terminal Value', 'Net Debt Impact', 'Share Count Impact']
+        base_components = [sum(pv_fcf), pv_terminal_value, -net_debt, 0]  # Share count is already in per-share calc
+        
+        # Create 3D bar chart
+        fig_3d_bars = go.Figure(data=[go.Bar(
+            x=components,
+            y=base_components,
+            marker_color=['#4ade80', '#22c55e', '#ef4444', '#6b7280'],
+            text=[format_currency(comp, currency_symbol) for comp in base_components],
+            textposition='auto'
+        )])
+        
+        fig_3d_bars.update_layout(
+            title="DCF Value Component Breakdown",
+            xaxis_title="Value Components", 
+            yaxis_title=f"Contribution ({currency_symbol}M)",
+            template="plotly_white",
+            height=400
+        )
+        
+        st.plotly_chart(fig_3d_bars, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error creating value driver chart: {str(e)}")
 # Performance metrics and model validation
 if st.checkbox("🔍 Show Model Performance Metrics", value=False):
     st.markdown("### 📊 Model Performance & Validation")
