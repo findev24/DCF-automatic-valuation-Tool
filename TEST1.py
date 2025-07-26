@@ -1569,7 +1569,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
     
     # Create improved 3D surface plot for sensitivity analysis
-try:
+    try:
     # Use better resolution and spacing for surface
     wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
     terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
@@ -1593,7 +1593,6 @@ try:
             else:
                 surface_values[i, j] = 0
     
-    # Clean the surface data
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
     
     # Create cleaner 3D surface
@@ -1673,6 +1672,7 @@ try:
     )
     
     st.plotly_chart(fig_3d_surface, use_container_width=True)
+
 except Exception as e:
     st.error(f"Error creating 3D surface plot: {str(e)}")
     # Fallback to 2D heatmap
@@ -1692,117 +1692,117 @@ except Exception as e:
         st.plotly_chart(fig_fallback, use_container_width=True)
     except:
         st.error("Unable to create any sensitivity analysis plot.")
-    
-    # Interactive controls for 3D exploration
-    st.markdown("#### 🎮 Interactive DCF Explorer")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        interactive_wacc = st.slider(
-            "Adjust WACC (%)", 
-            min_value=float(wacc * 0.5 * 100), 
-            max_value=float(wacc * 1.5 * 100), 
-            value=float(wacc * 100),
-            step=0.1
-        ) / 100
-    
-    with col2:
-        interactive_terminal = st.slider(
-            "Adjust Terminal Growth (%)", 
-            min_value=0.5, 
-            max_value=5.0, 
-            value=float(terminal_growth_rate * 100),
-            step=0.1
-        ) / 100
-    
-    with col3:
-        interactive_growth = st.slider(
-            "Adjust Year 1 Growth (%)", 
-            min_value=float(max(revenue_growth_rates[0] * 50, -20)), 
-            max_value=float(revenue_growth_rates[0] * 200), 
-            value=float(revenue_growth_rates[0] * 100),
-            step=1.0
-        ) / 100
-    
-    # Calculate interactive valuation
-    if interactive_wacc > interactive_terminal:
-        try:
-            # Adjust FCF based on growth change
-            growth_multiplier = 1 + (interactive_growth - revenue_growth_rates[0]) * 0.5
-            interactive_fcf = [fcf * growth_multiplier for fcf in fcf_projections]
-            interactive_terminal_fcf = interactive_fcf[-1] * (1 + interactive_terminal)
-            
-            # Calculate valuation
-            interactive_pv_fcf = sum([fcf / ((1 + interactive_wacc) ** i) for i, fcf in enumerate(interactive_fcf, 1)])
-            interactive_terminal_value = interactive_terminal_fcf / (interactive_wacc - interactive_terminal)
-            interactive_pv_terminal = interactive_terminal_value / ((1 + interactive_wacc) ** 5)
-            
-            interactive_enterprise_value = interactive_pv_fcf + interactive_pv_terminal
-            interactive_equity_value = interactive_enterprise_value - net_debt
-            interactive_value_per_share = interactive_equity_value / shares_outstanding
-            
-            interactive_upside = (interactive_value_per_share - current_market_price) / current_market_price
-            
-            # Display interactive results
-            st.markdown(f"""
-            <div class="valuation-highlight" style='background: linear-gradient(135deg, {"#16a34a" if interactive_upside > 0 else "#dc2626"} 0%, {"#22c55e" if interactive_upside > 0 else "#ef4444"} 100%);'>
-                <h3 style='margin: 0;'>Interactive Valuation Result</h3>
-                <h1 style='font-size: 2.5rem; margin: 1rem 0;'>{format_currency(interactive_value_per_share, currency_symbol)}</h1>
-                <p style='margin: 0; font-size: 1.2rem;'>
-                    {"Upside" if interactive_upside > 0 else "Downside"}: {abs(interactive_upside)*100:.1f}% 
-                    vs Current Price ({format_currency(current_market_price, currency_symbol)})
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Show impact breakdown
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                wacc_impact = (interactive_wacc - wacc) * 100
-                st.metric("WACC Impact", f"{wacc_impact:+.2f}%", f"vs Base: {wacc*100:.2f}%")
-            
-            with col2:
-                growth_impact = (interactive_terminal - terminal_growth_rate) * 100
-                st.metric("Terminal Growth Impact", f"{growth_impact:+.2f}%", f"vs Base: {terminal_growth_rate*100:.1f}%")
-            
-            with col3:
-                revenue_impact = (interactive_growth - revenue_growth_rates[0]) * 100
-                st.metric("Revenue Growth Impact", f"{revenue_impact:+.1f}%", f"vs Base: {revenue_growth_rates[0]*100:.1f}%")
-        except Exception as e:
-            st.error(f"Error in interactive valuation calculation: {str(e)}")
-    else:
-        st.error("⚠️ Invalid parameters: WACC must be greater than Terminal Growth Rate for valuation calculation.")
-    
-    # Value driver waterfall in 3D
-    st.markdown("#### 🌊 3D Value Driver Analysis")
-    
+
+# Interactive controls for 3D exploration
+st.markdown("#### 🎮 Interactive DCF Explorer")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    interactive_wacc = st.slider(
+        "Adjust WACC (%)", 
+        min_value=float(wacc * 0.5 * 100), 
+        max_value=float(wacc * 1.5 * 100), 
+        value=float(wacc * 100),
+        step=0.1
+    ) / 100
+
+with col2:
+    interactive_terminal = st.slider(
+        "Adjust Terminal Growth (%)", 
+        min_value=0.5, 
+        max_value=5.0, 
+        value=float(terminal_growth_rate * 100),
+        step=0.1
+    ) / 100
+
+with col3:
+    interactive_growth = st.slider(
+        "Adjust Year 1 Growth (%)", 
+        min_value=float(max(revenue_growth_rates[0] * 50, -20)), 
+        max_value=float(revenue_growth_rates[0] * 200), 
+        value=float(revenue_growth_rates[0] * 100),
+        step=1.0
+    ) / 100
+
+# Calculate interactive valuation
+if interactive_wacc > interactive_terminal:
     try:
-        # Calculate component contributions
-        components = ['FCF Years 1-5', 'Terminal Value', 'Net Debt Impact', 'Share Count Impact']
-        base_components = [sum(pv_fcf), pv_terminal_value, -net_debt, 0]  # Share count is already in per-share calc
+        # Adjust FCF based on growth change
+        growth_multiplier = 1 + (interactive_growth - revenue_growth_rates[0]) * 0.5
+        interactive_fcf = [fcf * growth_multiplier for fcf in fcf_projections]
+        interactive_terminal_fcf = interactive_fcf[-1] * (1 + interactive_terminal)
         
-        # Create 3D bar chart
-        fig_3d_bars = go.Figure(data=[go.Bar(
-            x=components,
-            y=base_components,
-            marker_color=['#4ade80', '#22c55e', '#ef4444', '#6b7280'],
-            text=[format_currency(comp, currency_symbol) for comp in base_components],
-            textposition='auto'
-        )])
+        # Calculate valuation
+        interactive_pv_fcf = sum([fcf / ((1 + interactive_wacc) ** i) for i, fcf in enumerate(interactive_fcf, 1)])
+        interactive_terminal_value = interactive_terminal_fcf / (interactive_wacc - interactive_terminal)
+        interactive_pv_terminal = interactive_terminal_value / ((1 + interactive_wacc) ** 5)
         
-        fig_3d_bars.update_layout(
-            title="DCF Value Component Breakdown",
-            xaxis_title="Value Components", 
-            yaxis_title=f"Contribution ({currency_symbol}M)",
-            template="plotly_white",
-            height=400
-        )
+        interactive_enterprise_value = interactive_pv_fcf + interactive_pv_terminal
+        interactive_equity_value = interactive_enterprise_value - net_debt
+        interactive_value_per_share = interactive_equity_value / shares_outstanding
         
-        st.plotly_chart(fig_3d_bars, use_container_width=True)
+        interactive_upside = (interactive_value_per_share - current_market_price) / current_market_price
+        
+        # Display interactive results
+        st.markdown(f"""
+        <div class="valuation-highlight" style='background: linear-gradient(135deg, {"#16a34a" if interactive_upside > 0 else "#dc2626"} 0%, {"#22c55e" if interactive_upside > 0 else "#ef4444"} 100%);'>
+            <h3 style='margin: 0;'>Interactive Valuation Result</h3>
+            <h1 style='font-size: 2.5rem; margin: 1rem 0;'>{format_currency(interactive_value_per_share, currency_symbol)}</h1>
+            <p style='margin: 0; font-size: 1.2rem;'>
+                {"Upside" if interactive_upside > 0 else "Downside"}: {abs(interactive_upside)*100:.1f}% 
+                vs Current Price ({format_currency(current_market_price, currency_symbol)})
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show impact breakdown
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            wacc_impact = (interactive_wacc - wacc) * 100
+            st.metric("WACC Impact", f"{wacc_impact:+.2f}%", f"vs Base: {wacc*100:.2f}%")
+        
+        with col2:
+            growth_impact = (interactive_terminal - terminal_growth_rate) * 100
+            st.metric("Terminal Growth Impact", f"{growth_impact:+.2f}%", f"vs Base: {terminal_growth_rate*100:.1f}%")
+        
+        with col3:
+            revenue_impact = (interactive_growth - revenue_growth_rates[0]) * 100
+            st.metric("Revenue Growth Impact", f"{revenue_impact:+.1f}%", f"vs Base: {revenue_growth_rates[0]*100:.1f}%")
     except Exception as e:
-        st.error(f"Error creating value driver chart: {str(e)}")
+        st.error(f"Error in interactive valuation calculation: {str(e)}")
+else:
+    st.error("⚠️ Invalid parameters: WACC must be greater than Terminal Growth Rate for valuation calculation.")
+
+# Value driver waterfall in 3D
+st.markdown("#### 🌊 3D Value Driver Analysis")
+
+try:
+    # Calculate component contributions
+    components = ['FCF Years 1-5', 'Terminal Value', 'Net Debt Impact', 'Share Count Impact']
+    base_components = [sum(pv_fcf), pv_terminal_value, -net_debt, 0]  # Share count is already in per-share calc
+    
+    # Create 3D bar chart
+    fig_3d_bars = go.Figure(data=[go.Bar(
+        x=components,
+        y=base_components,
+        marker_color=['#4ade80', '#22c55e', '#ef4444', '#6b7280'],
+        text=[format_currency(comp, currency_symbol) for comp in base_components],
+        textposition='auto'
+    )])
+    
+    fig_3d_bars.update_layout(
+        title="DCF Value Component Breakdown",
+        xaxis_title="Value Components", 
+        yaxis_title=f"Contribution ({currency_symbol}M)",
+        template="plotly_white",
+        height=400
+    )
+    
+    st.plotly_chart(fig_3d_bars, use_container_width=True)
+except Exception as e:
+    st.error(f"Error creating value driver chart: {str(e)}")
 # Performance metrics and model validation
 if st.checkbox("🔍 Show Model Performance Metrics", value=False):
     st.markdown("### 📊 Model Performance & Validation")
