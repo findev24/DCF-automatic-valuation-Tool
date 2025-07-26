@@ -1408,48 +1408,11 @@ st.markdown("""
 with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
     st.markdown("### 🌐 Interactive 3D Valuation Explorer")
     
-    # Create interactive 3D surface plot for DCF sensitivity
-    wacc_3d_range = np.linspace(wacc * 0.7, wacc * 1.3, 20)
-    terminal_3d_range = np.linspace(max(terminal_growth_rate * 0.5, 0.005), min(terminal_growth_rate * 2, 0.05), 20)
-    revenue_growth_3d_range = np.linspace(max(revenue_growth_rates[0] * 0.5, -0.1), revenue_growth_rates[0] * 1.5, 20)
-    
-    # Create 3D mesh
-    wacc_mesh, terminal_mesh, growth_mesh = np.meshgrid(wacc_3d_range, terminal_3d_range, revenue_growth_3d_range)
-    
-    # Calculate valuation surface
-    valuation_surface = np.zeros_like(wacc_mesh)
-    
-    for i in range(wacc_mesh.shape[0]):
-        for j in range(wacc_mesh.shape[1]):
-            for k in range(wacc_mesh.shape[2]):
-                w = wacc_mesh[i,j,k]
-                tg = terminal_mesh[i,j,k] 
-                rg = growth_mesh[i,j,k]
-                
-                if w > tg:  # Valid calculation
-                    try:
-                        # Adjust FCF based on revenue growth
-                        adj_fcf = [fcf * (1 + (rg - revenue_growth_rates[idx]) * 0.5) for idx, fcf in enumerate(fcf_projections)]
-                        adj_terminal_fcf = adj_fcf[-1] * (1 + tg)
-                        
-                        # Calculate enterprise value
-                        pv_fcf_3d = sum([fcf / ((1 + w) ** idx) for idx, fcf in enumerate(adj_fcf, 1)])
-                        terminal_val_3d = adj_terminal_fcf / (w - tg)
-                        pv_terminal_3d = terminal_val_3d / ((1 + w) ** 5)
-                        
-                        enterprise_val_3d = pv_fcf_3d + pv_terminal_3d
-                        equity_val_3d = enterprise_val_3d - net_debt
-                        valuation_surface[i,j,k] = max(0, equity_val_3d / shares_outstanding)
-                    except:
-                        valuation_surface[i,j,k] = 0
-                else:
-                    valuation_surface[i,j,k] = 0
-    
     # Create 3D scatter plot for Monte Carlo results
     if run_monte_carlo and simulation_results and len(simulation_results) > 100:
         try:
             # Sample points for visualization with better distribution
-            sample_size = min(500, len(simulation_results))  # Reduced for less clustering
+            sample_size = min(500, len(simulation_results))
             sample_indices = np.random.choice(len(simulation_results), sample_size, replace=False)
             sample_values = [simulation_results[i] for i in sample_indices]
             
@@ -1494,16 +1457,30 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                     marker=dict(
                         size=marker_sizes,
                         color=sample_values,
-                        colorscale='Viridis',
-                        opacity=0.7,
-                        showscale=True
+                        colorscale='deep',  # Changed to deeper, more vibrant blues
+                        opacity=0.8,  # Increased opacity for richer colors
+                        showscale=True,
+                        colorbar=dict(
+                            title=dict(
+                                text=f"Value per Share<br>({currency_symbol})",
+                                font=dict(size=14, color='white')
+                            ),
+                            thickness=15,
+                            len=0.6,
+                            bgcolor='rgba(0,0,0,0.8)',  # Darker colorbar background
+                            bordercolor='white',
+                            borderwidth=1,
+                            tickfont=dict(color='white', size=11)
+                        ),
+                        line=dict(color='rgba(255,255,255,0.3)', width=0.5)  # Subtle white outline
                     ),
                     text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
                           for w, tg, v in zip(wacc_scatter, terminal_scatter, sample_values)],
-                    name='Monte Carlo Results'
+                    name='Monte Carlo Results',
+                    hovertemplate='<b>Monte Carlo Scenario</b><br>%{text}<extra></extra>'
                 )])
                 
-                # Add current market price reference plane (simplified)
+                # Add current market price reference plane with enhanced blue
                 wacc_range_viz = np.linspace(wacc_min * 100, wacc_max * 100, 10)
                 terminal_range_viz = np.linspace(terminal_min * 100, terminal_max * 100, 10)
                 wacc_plane, terminal_plane = np.meshgrid(wacc_range_viz, terminal_range_viz)
@@ -1513,61 +1490,134 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                     x=wacc_plane,
                     y=terminal_plane,
                     z=price_plane,
-                    colorscale='Blues',
+                    colorscale=[[0, 'rgba(0,50,120,0.4)'], [1, 'rgba(0,100,200,0.6)']],  # Enhanced deeper blues
                     showscale=False,
-                    opacity=0.3,
-                    name='Current Market Price'
+                    opacity=0.5,  # Increased opacity
+                    name='Current Market Price',
+                    hovertemplate=f'Market Price: {format_currency(current_market_price, currency_symbol)}<extra></extra>'
                 ))
                 
-                # Add base case point
+                # Add base case point with enhanced styling
                 fig_3d_scatter.add_trace(go.Scatter3d(
                     x=[wacc * 100],
                     y=[terminal_growth_rate * 100],
                     z=[value_per_share],
                     mode='markers',
                     marker=dict(
-                        size=15,
-                        color='red',
-                        symbol='diamond'
+                        size=18,  # Larger size
+                        color='#FF4500',  # Bright orange-red
+                        symbol='diamond',
+                        line=dict(color='white', width=3),
+                        opacity=1.0
                     ),
                     name='Base Case DCF',
-                    text=[f'Base Case DCF<br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.2f}%<br>Value: {format_currency(value_per_share, currency_symbol)}']
+                    text=[f'<b>Base Case DCF</b><br>WACC: {wacc*100:.2f}%<br>Terminal Growth: {terminal_growth_rate*100:.2f}%<br>Value: {format_currency(value_per_share, currency_symbol)}'],
+                    hovertemplate='%{text}<extra></extra>'
                 ))
                 
+                # Enhanced dark theme layout
                 fig_3d_scatter.update_layout(
-                    title="3D Monte Carlo Valuation Distribution",
+                    title=dict(
+                        text="<b>3D Monte Carlo Valuation Distribution</b><br><sub>Risk-Adjusted Scenario Analysis</sub>",
+                        font=dict(size=22, color='white'),
+                        x=0.5
+                    ),
                     scene=dict(
                         xaxis=dict(
-                            title='WACC (%)',
+                            title=dict(text='WACC (%)', font=dict(size=14, color='white')),
                             range=[wacc_min * 100, wacc_max * 100],
-                            showgrid=True
+                            showgrid=True,
+                            gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
+                            gridwidth=2,
+                            showbackground=True,
+                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            tickfont=dict(color='white', size=11)
                         ),
                         yaxis=dict(
-                            title='Terminal Growth Rate (%)',
+                            title=dict(text='Terminal Growth Rate (%)', font=dict(size=14, color='white')),
                             range=[terminal_min * 100, terminal_max * 100],
-                            showgrid=True
+                            showgrid=True,
+                            gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
+                            gridwidth=2,
+                            showbackground=True,
+                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            tickfont=dict(color='white', size=11)
                         ),
                         zaxis=dict(
-                            title=f'Value per Share ({currency_symbol})',
-                            showgrid=True
+                            title=dict(text=f'Value per Share ({currency_symbol})', font=dict(size=14, color='white')),
+                            showgrid=True,
+                            gridcolor='rgba(100,150,200,0.3)',  # Enhanced blue grid
+                            gridwidth=2,
+                            showbackground=True,
+                            backgroundcolor='rgba(10,20,40,0.8)',  # Darker blue background
+                            tickfont=dict(color='white', size=11)
                         ),
                         camera=dict(
                             up=dict(x=0, y=0, z=1),
                             center=dict(x=0, y=0, z=0),
                             eye=dict(x=1.8, y=1.8, z=1.2)
-                        )
+                        ),
+                        bgcolor='rgba(5,15,35,1)',  # Much darker blue background
+                        aspectmode='cube'
                     ),
-                    height=650,
+                    paper_bgcolor='rgba(0,0,0,1)',  # Black paper background
+                    plot_bgcolor='rgba(5,15,35,1)',  # Dark blue plot background
+                    font=dict(color='white'),
+                    height=700,  # Increased height
                     showlegend=True,
-                    margin=dict(l=0, r=0, t=50, b=0)
+                    legend=dict(
+                        bgcolor='rgba(0,0,0,0.8)',
+                        bordercolor='rgba(100,150,200,0.5)',
+                        borderwidth=1,
+                        font=dict(color='white', size=12),
+                        x=0.02,
+                        y=0.98
+                    ),
+                    margin=dict(l=0, r=0, t=80, b=0)
                 )
                 
-                st.plotly_chart(fig_3d_scatter, use_container_width=True)
+                st.plotly_chart(fig_3d_scatter, use_container_width=True, config={
+                    'displayModeBar': True,
+                    'displaylogo': False,
+                    'modeBarButtonsToRemove': ['pan2d', 'lasso2d'],
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'dcf_monte_carlo_3d',
+                        'height': 700,
+                        'width': 1200,
+                        'scale': 1
+                    }
+                })
+                
+                # Add enhanced info box
+                st.markdown(f"""
+                <div style='text-align: center; margin-top: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #0f3460 0%, #1e3a8a 50%, #1e40af 100%); border-radius: 12px; color: white; box-shadow: 0 8px 16px rgba(0,0,0,0.3);'>
+                    <h4 style='margin-top: 0;'>🎯 Enhanced 3D Visualization Insights</h4>
+                    <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;'>
+                        <div>
+                            <strong>🔵 Blue Points:</strong><br>
+                            Monte Carlo scenarios with deeper blue shading for enhanced contrast
+                        </div>
+                        <div>
+                            <strong>🔶 Orange Diamond:</strong><br>
+                            Your base case DCF at current assumptions
+                        </div>
+                        <div>
+                            <strong>🌊 Blue Plane:</strong><br>
+                            Current market price reference with enhanced transparency
+                        </div>
+                        <div>
+                            <strong>🎮 Interactive:</strong><br>
+                            Rotate, zoom, hover for detailed scenario analysis
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
             else:
                 st.warning("Insufficient valid data points for 3D Monte Carlo visualization.")
         except Exception as e:
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
-    # Create 2D sensitivity analysis instead of 3D
 # Single Stunning 3D DCF Sensitivity Analysis
 try:
     # Calculate surface with optimal resolution
