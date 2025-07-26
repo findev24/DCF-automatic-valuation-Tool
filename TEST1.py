@@ -1569,7 +1569,7 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
             st.error(f"Error creating 3D Monte Carlo plot: {str(e)}")
     
     # Create improved 3D surface plot for sensitivity analysis
-    try:
+try:
     # Use better resolution and spacing for surface
     wacc_surface_range = np.linspace(wacc * 0.75, wacc * 1.25, 25)
     terminal_surface_range = np.linspace(max(terminal_growth_rate * 0.4, 0.005), min(terminal_growth_rate * 2, 0.045), 25)
@@ -1593,18 +1593,18 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
             else:
                 surface_values[i, j] = 0
     
+    # Clean the surface data
     surface_values = np.nan_to_num(surface_values, nan=0.0, posinf=0.0, neginf=0.0)
     
     # Create cleaner 3D surface
     fig_3d_surface = go.Figure()
     
-    # Add main surface
     # Add main surface (ultra-simplified)
-fig_3d_surface.add_trace(go.Surface(
-    z=surface_values,
-    x=wacc_surface_range * 100,
-    y=terminal_surface_range * 100
-))
+    fig_3d_surface.add_trace(go.Surface(
+        z=surface_values,
+        x=wacc_surface_range * 100,
+        y=terminal_surface_range * 100
+    ))
     
     # Add contour lines at the base (simplified)
     fig_3d_surface.add_trace(go.Contour(
