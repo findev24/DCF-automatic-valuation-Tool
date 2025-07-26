@@ -1474,29 +1474,26 @@ with st.expander("🎯 Interactive 3D DCF Model Visualization", expanded=True):
                 marker_sizes.append(4)  # Smaller for outliers
         
         fig_3d_scatter = go.Figure(data=[go.Scatter3d(
-            x=wacc_scatter * 100,
-            y=terminal_scatter * 100,
-            z=sample_values,
-            mode='markers',
-            marker=dict(
-                size=marker_sizes,
-                color=sample_values,
-                colorscale='Viridis',
-                opacity=0.7,
-                colorbar=dict(
-                    title=f"Value per Share ({currency_symbol})",
-                    titleside="right",
-                    tickmode="linear",
-                    tick0=min(sample_values),
-                    dtick=(max(sample_values) - min(sample_values)) / 5
-                ),
-                line=dict(color='white', width=0.5)  # Add outline for better visibility
-            ),
-            text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
-                  for w, tg, v in zip(wacc_scatter, terminal_scatter, sample_values)],
-            hovertemplate='<b>Scenario Analysis</b><br>%{text}<extra></extra>',
-            name='Monte Carlo Results'
-        )])
+    x=wacc_scatter * 100,
+    y=terminal_scatter * 100,
+    z=sample_values,
+    mode='markers',
+    marker=dict(
+        size=marker_sizes,
+        color=sample_values,
+        colorscale='Viridis',
+        opacity=0.7,
+        colorbar=dict(
+            title=f"Value per Share ({currency_symbol})",
+            titleside="right"
+        ),
+        line=dict(color='white', width=0.5)
+    ),
+    text=[f'WACC: {w*100:.2f}%<br>Terminal Growth: {tg*100:.2f}%<br>Value: {format_currency(v, currency_symbol)}' 
+          for w, tg, v in zip(wacc_scatter, terminal_scatter, sample_values)],
+    hovertemplate='<b>Scenario Analysis</b><br>%{text}<extra></extra>',
+    name='Monte Carlo Results'
+)])
         
         # Add current market price reference plane
         wacc_range_viz = np.linspace(wacc_min * 100, wacc_max * 100, 10)
